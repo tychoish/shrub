@@ -8,28 +8,28 @@ type Command interface {
 }
 
 type CommandDefinition struct {
-	Function    string                 `json:"func,omitempty"`
-	Type        string                 `json:"type,omitempty"`
-	DisplayName string                 `json:"display_name,omitempty"`
-	Command     string                 `json:"command,omitempty"`
-	Variants    []string               `json:"variants"`
-	TimeoutSecs int                    `json:"timeout_secs,omitempty"`
-	Params      map[string]interface{} `json:"params,omitempty"`
-	Vars        map[string]string      `json:"vars,omitempty"`
+	FunctionName  string                 `json:"func,omitempty"`
+	ExecutionType string                 `json:"type,omitempty"`
+	DisplayName   string                 `json:"display_name,omitempty"`
+	CommandName   string                 `json:"command,omitempty"`
+	RunVariants   []string               `json:"variants"`
+	TimeoutSecs   int                    `json:"timeout_secs,omitempty"`
+	Params        map[string]interface{} `json:"params,omitempty"`
+	Vars          map[string]string      `json:"vars,omitempty"`
 }
 
-func (c *CommandDefinition) Validate() error                         { return nil }
-func (c *CommandDefinition) Resolve() *CommandDefinition             { return c }
-func (c *CommandDefinition) Function(n string) *CommandDefinition    { c.Function = n; return c }
-func (c *CommandDefinition) Type(n string) *CommandDefinition        { c.Type = n; return c }
-func (c *CommandDefinition) DisplayName(n string) *CommandDefinition { c.DisplayName = n; return c }
-func (c *CommandDefinition) Command(n string) *CommandDefinition     { c.Command = n; return c }
+func (c *CommandDefinition) Validate() error                      { return nil }
+func (c *CommandDefinition) Resolve() *CommandDefinition          { return c }
+func (c *CommandDefinition) Function(n string) *CommandDefinition { c.FunctionName = n; return c }
+func (c *CommandDefinition) Type(n string) *CommandDefinition     { c.ExecutionType = n; return c }
+func (c *CommandDefinition) Name(n string) *CommandDefinition     { c.DisplayName = n; return c }
+func (c *CommandDefinition) Command(n string) *CommandDefinition  { c.CommandName = n; return c }
 func (c *CommandDefinition) Timeout(s time.Duration) *CommandDefinition {
 	c.TimeoutSecs = int(s.Seconds())
 	return c
 }
 func (c *CommandDefinition) Variants(vs ...string) *CommandDefinition {
-	c.Variants = append(c.Variants, vs...)
+	c.RunVariants = append(c.RunVariants, vs...)
 	return c
 }
 func (c *CommandDefinition) ResetVars() *CommandDefinition                      { c.Vars = nil; return c }
@@ -84,6 +84,28 @@ func (c *CommandDefinition) ExtendVars(vars map[string]string) *CommandDefinitio
 	}
 
 	return c
+}
+
+type CommandSequence []*CommandDefinition
+
+func (s CommandSequence) Command() *CommandDefinition {
+	c := &CommandDefinition{}
+	s = append(s, c)
+	return c
+}
+
+func (s CommandSequence) Append(c ...*CommandDefinition) CommandSequence {
+	s = append(s, c...)
+	return s
+}
+
+func (s CommandSequence) Add(cmd Command) CommandSequence { s = append(s, cmd.Resolve()); return s }
+
+func (s CommandSequence) Extend(cmds ...Command) CommandSequence {
+	for _, cmd := range cmds {
+		s = append(s, cmd.Resolve())
+	}
+	return s
 }
 
 ////////////////////////////////////////////////////////////////////////
