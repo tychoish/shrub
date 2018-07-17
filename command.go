@@ -1,6 +1,10 @@
 package shrub
 
-import "time"
+import (
+	"encoding/json"
+	"errors"
+	"time"
+)
 
 type Command interface {
 	Resolve() *CommandDefinition
@@ -112,66 +116,200 @@ func (s CommandSequence) Extend(cmds ...Command) CommandSequence {
 //
 // Specific Command Implementations
 
-type CmdExec struct {
-	Args             []string
-	Env              map[string]string
-	WorkingDirectory string
+func exportCmd(cmd Command) map[string]interface{} {
+	if err := cmd.Validate(); err != nil {
+		panic(err)
+	}
+
+	jsonStruct, err := json.Marshal(cmd)
+	if err != nil {
+		panic(err)
+	}
+
+	out := map[string]interface{}{}
+	if err := json.Unmarshal(jsonStruct, &out); err != nil {
+		panic(err)
+	}
+
+	return out
 }
 
-func (c CmdExec) Resolve() *CommandDefinition { return nil }
-func (c CmdExec) Validate() error             { return nil }
+type CmdExec struct {
+	Background       bool   `json:"background"`
+	Silent           bool   `json:"silent"`
+	ContinueOnError  bool   `json:"continue_on_err"`
+	SystemLog        bool   `json:"system_log"`
+	CombineOuutput   bool   `json:"redirect_standard_error_to_output"`
+	IgnoreStdError   bool   `json:"ignore_standard_error"`
+	IgnoreStdOut     bool   `json:"ignore_standard_out"`
+	KeepEmptyArgs    bool   `json:"keep_empty_args"`
+	WorkingDirectory string `json:"working_dir"`
+	Command          string
+	Binary           string
+	Args             []string
+	Env              map[string]string
+}
 
-type CmdExecShell struct{}
+func (c CmdExec) Validate() error { return nil }
+func (c CmdExec) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		CommandName: "sub process.exec",
+		Params:      exportCmd(c),
+	}
+}
 
-func (c CmdExecShell) Resolve() *CommandDefinition { return nil }
-func (c CmdExecShell) Validate() error             { return nil }
+type CmdExecShell struct {
+	Background       bool   `json:"background"`
+	Silent           bool   `json:"silent"`
+	ContinueOnError  bool   `json:"continue_on_err"`
+	SystemLog        bool   `json:"system_log"`
+	CombineOuutput   bool   `json:"redirect_standard_error_to_output"`
+	IgnoreStdError   bool   `json:"ignore_standard_error"`
+	IgnoreStdOut     bool   `json:"ignore_standard_out"`
+	WorkingDirectory string `json:"working_dir"`
+	Script           string `json:"script"`
+}
 
-type CmdS3Put struct{}
+func (c CmdExecShell) Validate() error { return nil }
+func (c CmdExecShell) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "shell.exec",
+		Params:       exportCmd(c),
+	}
+}
 
-func (c CmdS3Put) Resolve() *CommandDefinition { return nil }
-func (c CmdS3Put) Validate() error             { return nil }
+type CmdS3Put struct {
+	Optional               bool     `json:"optional"`
+	LocalFile              string   `json:"local_file"`
+	LocalFileIncludeFilter []string `json:"local_files_include_filter"`
+	Bucket                 string   `json:"bucket"`
+	RemoteFile             string   `json:"remote_file"`
+	DisplayName            string   `json:"display_name"`
+	ContentType            string   `json:"content_type"`
+	CredKey                string   `json:"aws_key"`
+	CredSecret             string   `json:"aws_secret"`
+	Permissions            string   `json:"permissions"`
+	Visibility             string   `json:"visibility"`
+	BuildVariants          []string `json:"build_variants"`
+}
+
+func (c CmdS3Put) Validate() error {
+	switch {
+	case c.CredKey == "", c.CredSecret == "":
+		return errors.New("must specify aws credentials")
+	case c.LocalFile == "" && len(c.LocalFileIncludeFilter) == 0:
+		return errors.New("must specify a local file to upload")
+	default:
+		return nil
+	}
+}
+func (c CmdS3Put) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "s3.put",
+		Params:       exportCmd(c),
+	}
+}
 
 type CmdS3Get struct{}
 
-func (c CmdS3Get) Resolve() *CommandDefinition { return nil }
-func (c CmdS3Get) Validate() error             { return nil }
+func (c CmdS3Get) Validate() error { return nil }
+func (c CmdS3Get) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "s3.get",
+		Params:       exportCmd(c),
+	}
+}
 
 type CmdS3Copy struct{}
 
-func (c CmdS3Copy) Resolve() *CommandDefinition { return nil }
-func (c CmdS3Copy) Validate() error             { return nil }
+func (c CmdS3Copy) Validate() error { return nil }
+func (c CmdS3Copy) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "s3Copy.copy",
+		Params:       exportCmd(c),
+	}
+}
 
 type CmdGetProject struct{}
 
-func (c CmdGetProject) Resolve() *CommandDefinition { return nil }
-func (c CmdGetProject) Validate() error             { return nil }
+func (c CmdGetProject) Validate() error { return nil }
+func (c CmdGetProject) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "git.get_project",
+		Params:       exportCmd(c),
+	}
+}
 
 type CmdResultsJSON struct{}
 
-func (c CmdResultsJSON) Resolve() *CommandDefinition { return nil }
-func (c CmdResultsJSON) Validate() error             { return nil }
+func (c CmdResultsJSON) Validate() error { return nil }
+func (c CmdResultsJSON) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "attach.results",
+		Params:       exportCmd(c),
+	}
+}
 
 type CmdResultsXunit struct{}
 
-func (c CmdResultsXunit) Resolve() *CommandDefinition { return nil }
-func (c CmdResultsXunit) Validate() error             { return nil }
+func (c CmdResultsXunit) Validate() error { return nil }
+func (c CmdResultsXunit) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "attach.xunit_results",
+		Params:       exportCmd(c),
+	}
+}
 
-type CmdResultsGoTest struct{}
+type CmdResultsGoTest struct {
+	JSONFormat   bool `json:"-"`
+	LegacyFormat bool `json:"-"`
+}
 
-func (c CmdResultsGoTest) Resolve() *CommandDefinition { return nil }
-func (c CmdResultsGoTest) Validate() error             { return nil }
+func (c CmdResultsGoTest) Validate() error { return nil }
+func (c CmdResultsGoTest) Resolve() *CommandDefinition {
+	if c.JSONFormat {
+		return &CommandDefinition{
+			FunctionName: "gotest.parse_json",
+			Params:       exportCmd(c),
+		}
+	}
 
-type CmdArchiveCreate struct{}
+	return &CommandDefinition{
+		FunctionName: "gotest.parse_files",
+		Params:       exportCmd(c),
+	}
+}
 
-func (c CmdArchiveCreate) Resolve() *CommandDefinition { return nil }
-func (c CmdArchiveCreate) Validate() error             { return nil }
+type CmdArchiveCreate struct {
+	Auto bool `json:"-"`
+}
 
-type CmdArchiveExtract struct{}
+func (c CmdArchiveCreate) Validate() error { return nil }
+func (c CmdArchiveCreate) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "",
+		Params:       exportCmd(c),
+	}
+}
 
-func (c CmdArchiveExtract) Resolve() *CommandDefinition { return nil }
-func (c CmdArchiveExtract) Validate() error             { return nil }
+type CmdArchiveExtract struct {
+	Auto bool `json:"-"`
+}
+
+func (c CmdArchiveExtract) Validate() error { return nil }
+func (c CmdArchiveExtract) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "",
+		Params:       exportCmd(c),
+	}
+}
 
 type CmdAttachArtifacts struct{}
 
-func (c CmdAttachArtifacts) Resolve() *CommandDefinition { return nil }
-func (c CmdAttachArtifacts) Validate() error             { return nil }
+func (c CmdAttachArtifacts) Validate() error { return nil }
+func (c CmdAttachArtifacts) Resolve() *CommandDefinition {
+	return &CommandDefinition{
+		FunctionName: "",
+		Params:       exportCmd(c),
+	}
+}

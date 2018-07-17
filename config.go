@@ -26,15 +26,14 @@ func (c *Configuration) Task(name string) *Task {
 
 func (c *Configuration) TaskGroup(name string) *TaskGroup {
 	for _, g := range c.Groups {
-		if g.Name == name {
-
+		if g.GroupName == name {
+			return g
 		}
 	}
 
 	g := new(TaskGroup)
-	g.Name = name
 	c.Groups = append(c.Groups, g)
-	return g
+	return g.Name(name)
 }
 
 func (c *Configuration) Function(name string) CommandSequence {

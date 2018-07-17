@@ -1,10 +1,10 @@
 package shrub
 
 type Task struct {
-	Name             string               `json:"name"`
-	PriorityOverride int                  `json:"priority"`
-	Dependencies     []TaskDependency     `json:"depends_on"`
-	Commands         []*CommandDefinition `json:"commands"`
+	Name             string           `json:"name"`
+	PriorityOverride int              `json:"priority"`
+	Dependencies     []TaskDependency `json:"depends_on"`
+	Commands         CommandSequence  `json:"commands"`
 }
 
 type TaskDependency struct {
@@ -55,3 +55,17 @@ func (t *Task) FunctionWithVars(id string, vars map[string]string) *Task {
 }
 
 func (t *Task) Priority(pri int) *Task { t.PriorityOverride = pri; return t }
+
+type TaskGroup struct {
+	GroupName     string          `json:"name"`
+	MaxHosts      int             `json:"max_hosts"`
+	SetupGroup    CommandSequence `json:"setup_group"`
+	SetupTask     CommandSequence `json:"setup_task"`
+	Tasks         CommandSequence `json:"tasks"`
+	TeardownTask  CommandSequence `json:"teardown_task"`
+	TeardownGroup CommandSequence `json:"teardown_group"`
+	Timeout       CommandSequence `json:"timeout"`
+}
+
+func (g *TaskGroup) Name(id string) *TaskGroup      { g.GroupName = id; return g }
+func (g *TaskGroup) SetMaxHosts(num int) *TaskGroup { g.MaxHosts = num; return g }
