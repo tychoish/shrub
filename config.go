@@ -1,6 +1,12 @@
 package shrub
 
-type Configuration struct{}
+type Configuration struct {
+	functions []*Function
+	tasks     []*Task
+	groups    []*TaskGroup
+	variants  []*Variant
+}
+
 type Task struct{}
 type Variant struct{}
 type TaskGroup struct{}
@@ -21,13 +27,64 @@ type TaskDependency struct {
 	Variant string
 }
 
-func (c *Configuration) AddTask(name string) *Task  { return &Task{} }
-func (t *Task) Commmand(cmd *Command) *Task         { return t }
-func (t *Task) Dependency(dep TaskDependency) *Task { return t }
-func (t *Task) Function(fn string) *Task            { return t }
-func (t *Task) Priority(pri int) *Task              { return t }
+func (c *Configuration) Task(name string) *Task {
+	for _, t := range c.tasks {
+		if t.name == name {
+			return t
+		}
+	}
 
-func (c *Configuration) AddVariant(id string) *Variant                       { return &Variant{} }
+	t = new(Task)
+	t.name = name
+	c.tasks = append(c.tasks, t)
+
+	return t
+}
+
+func (c *Configuration) TaskGroup(name string) *TaskGroup {
+	for _, g := range c.groups {
+		if g.name == name {
+			return g
+		}
+	}
+
+	g = new(TaskGroup)
+	c.name = name
+	c.groups = append(c.groups, g)
+	return g
+}
+
+func (c *Configuration) Function(name string) *Function {
+	for _, f := range c.functions {
+		if f.name == name {
+			return f
+		}
+	}
+
+	f = new(Function)
+	f.name = name
+	c.functions = append(c.functions, f)
+	return f
+}
+
+func (c *Configuration) Variant(id string) *Variant {
+	for _, v := range c.variants {
+		if v.name == id {
+			return v
+		}
+	}
+
+	v = new(Variant)
+	v.name = id
+	c.variants = append(c.variants, v)
+	return v
+}
+
+func (t *Task) Command(cmd Command) *Task                                    { return t }
+func (t *Task) AddCommand() *CommandDefinition                               { return &CommandDefinition{} }
+func (t *Task) Dependency(dep TaskDependency) *Task                          { return t }
+func (t *Task) Function(fn string) *Task                                     { return t }
+func (t *Task) Priority(pri int) *Task                                       { return t }
 func (v *Variant) Name(id string) *Variant                                   { return v }
 func (v *Variant) DisplayName(id string) *Variant                            { return v }
 func (v *Variant) RunOn(distro string) *Variant                              { return v }
@@ -36,15 +93,17 @@ func (v *Variant) Expansion(k string, v interface{}) *Variant                { r
 func (v *Variant) AddTask(name string) *Variant                              { return v }
 func (v *Variant) AddTaskWithOptions(name string, opts TaskOptions) *Variant { return v }
 func (v *Variant) DisplayTasks(def DisplayTaskDefinition) *Variant           { return v }
-
-func (c *Configuration) TaskGroup(name string) *TaskGroup      { return &TaskGroup{} }
-func (t *TaskGroup) AddTask(tasks ...[]string) *TaskGroup      { return t }
-func (t *TaskGroup) SetMaxHosts(num int) *TaskGroup            { return t }
-func (t *TaskGroup) AddSetupTask(cmd *Command) *TaskGroup      { return t }
-func (t *TaskGroup) AddSetupGroup(cmd *Command) *TaskGroup     { return t }
-func (t *TaskGroup) AddTeardownTask(cmd *Command) *TaskGroup   { return t }
-func (t *TaskGroup) AddTeardownGroup(cmd *Command) *TaskGroup  { return t }
-func (t *TaskGroup) AddTimeoutHandler(cmd *Command) *TaskGroup { return t }
-
-func (c *Configuration) AddFunction(name string) *Function       { return &Function{} }
-func (f *Function) Command(name string, args *Command) *Function { return f }
+func (g *TaskGroup) AddTask(tasks ...[]string) *TaskGroup                    { return g }
+func (g *TaskGroup) SetMaxHosts(num int) *TaskGroup                          { return g }
+func (g *TaskGroup) SetupTask(c Command) *TaskGroup                          { return g }
+func (g *TaskGroup) AddSetupTask() *CommandDefinition                        { return &CommandDefinition{} }
+func (g *TaskGroup) SetupGroup(c Command) *TaskGroup                         { return g }
+func (g *TaskGroup) AddSetupGroup() *CommandDefinition                       { return &CommandDefinition{} }
+func (g *TaskGroup) TeardownTask(c Command) *TaskGroup                       { return g }
+func (g *TaskGroup) AddTeardownTask() *CommandDefinition                     { return &CommandDefinition{} }
+func (g *TaskGroup) TeardownGroup(c Command) *TaskGroup                      { return g }
+func (g *TaskGroup) AddTeardownGroup() *CommandDefinition                    { return &CommandDefinition{} }
+func (g *TaskGroup) TimeoutHandler(c Command) *TaskGroup                     { return g }
+func (g *TaskGroup) AddTimeoutHandler() *CommandDefinition                   { return &CommandDefinition{} }
+func (f *Function) AddCommand() *CommandDefinition                           { return &CommandDefinition{} }
+func (f *Function) Command(c Command) *Function                              { return f }
