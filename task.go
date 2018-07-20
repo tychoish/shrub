@@ -2,8 +2,8 @@ package shrub
 
 type Task struct {
 	Name             string           `json:"name"`
-	PriorityOverride int              `json:"priority"`
-	Dependencies     []TaskDependency `json:"depends_on"`
+	PriorityOverride int              `json:"priority,omitempty"`
+	Dependencies     []TaskDependency `json:"depends_on,omitempty"`
 	Commands         CommandSequence  `json:"commands"`
 }
 

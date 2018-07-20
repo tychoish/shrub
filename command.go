@@ -153,7 +153,7 @@ type CmdExec struct {
 func (c CmdExec) Validate() error { return nil }
 func (c CmdExec) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		CommandName: "sub process.exec",
+		CommandName: "subprocess.exec",
 		Params:      exportCmd(c),
 	}
 }
