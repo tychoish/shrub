@@ -13,6 +13,7 @@ import (
 func BuildConfiguration(f func(*Configuration)) (c *Configuration, err error) {
 	defer func() {
 		if p := recover(); p != nil {
+			c = nil
 			switch pm := p.(type) {
 			case error:
 				err = pm
