@@ -3,6 +3,7 @@ package shrub
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -16,7 +17,7 @@ type CommandDefinition struct {
 	ExecutionType string                 `json:"type,omitempty"`
 	DisplayName   string                 `json:"display_name,omitempty"`
 	CommandName   string                 `json:"command,omitempty"`
-	RunVariants   []string               `json:"variants"`
+	RunVariants   []string               `json:"variants,omitempty"`
 	TimeoutSecs   int                    `json:"timeout_secs,omitempty"`
 	Params        map[string]interface{} `json:"params,omitempty"`
 	Vars          map[string]string      `json:"vars,omitempty"`
@@ -210,7 +211,15 @@ func (c CmdS3Put) Resolve() *CommandDefinition {
 	}
 }
 
-type CmdS3Get struct{}
+type CmdS3Get struct {
+	AWSKey        string   `json:"aws_key"`
+	AWSSecret     string   `json:"aws_secret"`
+	RemoteFile    string   `json:"remote_file"`
+	Bucket        string   `json:"bucket"`
+	LocalFile     string   `json:"local_file"`
+	ExtractTo     string   `json:"extract_to"`
+	BuildVariants []string `json:"build_variants"`
+}
 
 func (c CmdS3Get) Validate() error { return nil }
 func (c CmdS3Get) Resolve() *CommandDefinition {
@@ -220,7 +229,23 @@ func (c CmdS3Get) Resolve() *CommandDefinition {
 	}
 }
 
-type CmdS3Copy struct{}
+type CmdS3Copy struct {
+	AWSKey    string `json:"aws_key"`
+	AWSSecret string `json:"aws_secret"`
+	Files     []struct {
+		Optional      bool     `json:"optional"`
+		DisplayName   string   `json:"display_name"`
+		BuildVariants []string `json:"build_variants"`
+		Source        struct {
+			Bucket string `json:"bucket"`
+			Path   string `json:"path"`
+		} `json:"source"`
+		Destination struct {
+			Bucket string `json:"bucket"`
+			Path   string `json:"path"`
+		} `json:"source"`
+	} `json:"s3_copy_files"`
+}
 
 func (c CmdS3Copy) Validate() error { return nil }
 func (c CmdS3Copy) Resolve() *CommandDefinition {
@@ -230,7 +255,11 @@ func (c CmdS3Copy) Resolve() *CommandDefinition {
 	}
 }
 
-type CmdGetProject struct{}
+type CmdGetProject struct {
+	Token     string            `json:"token"`
+	Directory string            `json:"directory"`
+	Revisions map[string]string `json:"revisions"`
+}
 
 func (c CmdGetProject) Validate() error { return nil }
 func (c CmdGetProject) Resolve() *CommandDefinition {
@@ -240,7 +269,9 @@ func (c CmdGetProject) Resolve() *CommandDefinition {
 	}
 }
 
-type CmdResultsJSON struct{}
+type CmdResultsJSON struct {
+	File string `json:"file_location"`
+}
 
 func (c CmdResultsJSON) Validate() error { return nil }
 func (c CmdResultsJSON) Resolve() *CommandDefinition {
@@ -250,7 +281,10 @@ func (c CmdResultsJSON) Resolve() *CommandDefinition {
 	}
 }
 
-type CmdResultsXunit struct{}
+type CmdResultsXunit struct {
+	File  string   `json:"file"`
+	Files []string `json:"files"`
+}
 
 func (c CmdResultsXunit) Validate() error { return nil }
 func (c CmdResultsXunit) Resolve() *CommandDefinition {
@@ -280,36 +314,87 @@ func (c CmdResultsGoTest) Resolve() *CommandDefinition {
 	}
 }
 
-type CmdArchiveCreate struct {
-	Auto bool `json:"-"`
+type ArchiveFormat string
+
+const (
+	ZIP     ArchiveFormat = "zip"
+	TARBALL               = "tarball"
+)
+
+func (f ArchiveFormat) Validate() error {
+	switch f {
+	case ZIP, TARBALL:
+		return nil
+	default:
+		return fmt.Errorf("'%s' is not a valid archive format", f)
+	}
 }
 
-func (c CmdArchiveCreate) Validate() error { return nil }
+func (f ArchiveFormat) createCmdName() string {
+	switch f {
+	case ZIP:
+		return "archive.zip_pack"
+	case TARBALL:
+		return "archive.targz_pack"
+	default:
+		panic(f.Validate())
+	}
+}
+
+func (f ArchiveFormat) extractCmdName() string {
+	switch f {
+	case ZIP:
+		return "archive.zip_extract"
+	case TARBALL:
+		return "archive.targz_extract"
+	case "auto":
+		return "archive.auto_extract"
+	default:
+		panic(f.Validate())
+	}
+
+}
+
+type CmdArchiveCreate struct {
+	Format    ArchiveFormat `json:"-"`
+	Target    string        `json:"target"`
+	SourceDir string        `json:"source_dir"`
+	Include   []string      `json:"include"`
+	Exclude   []string      `json:"exclude_files"`
+}
+
+func (c CmdArchiveCreate) Validate() error { return c.Format.Validate() }
 func (c CmdArchiveCreate) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "",
+		FunctionName: c.Format.createCmdName(),
 		Params:       exportCmd(c),
 	}
 }
 
 type CmdArchiveExtract struct {
-	Auto bool `json:"-"`
+	Format  ArchiveFormat `json:"-"`
+	Path    string        `json:"path"`
+	Target  string        `json:"destination"`
+	Exclude []string      `json:"exclude_files"`
 }
 
 func (c CmdArchiveExtract) Validate() error { return nil }
 func (c CmdArchiveExtract) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "",
+		FunctionName: c.Format.extractCmdName(),
 		Params:       exportCmd(c),
 	}
 }
 
-type CmdAttachArtifacts struct{}
+type CmdAttachArtifacts struct {
+	Optional bool     `json:"optional"`
+	Files    []string `json:"files"`
+}
 
 func (c CmdAttachArtifacts) Validate() error { return nil }
 func (c CmdAttachArtifacts) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "",
+		FunctionName: "attach.artifacts",
 		Params:       exportCmd(c),
 	}
 }

@@ -30,7 +30,7 @@ type Configuration struct {
 	Post      CommandSequence            `json:"post"`
 	Timeout   CommandSequence            `json:"timeout"`
 
-	// TopLevel Options
+	// Top Level Options
 	ExecTimeoutSecs int      `json:"timeout,omitempty"`
 	BatchTimeSecs   int      `json:"batchtime,omitempty"`
 	Stepback        bool     `json:"stepback,omitempty"`

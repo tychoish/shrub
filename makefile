@@ -7,7 +7,7 @@ race:
 test: 
 	go test -v -cover ./...
 coverage:$(buildDir)/cover.out
-	go tool cover -func=cover.out
+	go tool cover -func=$< | sed -E 's%github.com/.*/shrub/%%' | column -t
 coverage-html:$(buildDir)/cover.html
 
 $(buildDir):
