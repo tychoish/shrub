@@ -68,8 +68,8 @@ type CmdExecShell struct {
 func (c CmdExecShell) Validate() error { return nil }
 func (c CmdExecShell) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "shell.exec",
-		Params:       exportCmd(c),
+		CommandName: "shell.exec",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -100,8 +100,8 @@ func (c CmdS3Put) Validate() error {
 }
 func (c CmdS3Put) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "s3.put",
-		Params:       exportCmd(c),
+		CommandName: "s3.put",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -118,8 +118,8 @@ type CmdS3Get struct {
 func (c CmdS3Get) Validate() error { return nil }
 func (c CmdS3Get) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "s3.get",
-		Params:       exportCmd(c),
+		CommandName: "s3.get",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -144,8 +144,8 @@ type CmdS3Copy struct {
 func (c CmdS3Copy) Validate() error { return nil }
 func (c CmdS3Copy) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "s3Copy.copy",
-		Params:       exportCmd(c),
+		CommandName: "s3Copy.copy",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -158,8 +158,8 @@ type CmdGetProject struct {
 func (c CmdGetProject) Validate() error { return nil }
 func (c CmdGetProject) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "git.get_project",
-		Params:       exportCmd(c),
+		CommandName: "git.get_project",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -170,8 +170,8 @@ type CmdResultsJSON struct {
 func (c CmdResultsJSON) Validate() error { return nil }
 func (c CmdResultsJSON) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "attach.results",
-		Params:       exportCmd(c),
+		CommandName: "attach.results",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -183,8 +183,8 @@ type CmdResultsXunit struct {
 func (c CmdResultsXunit) Validate() error { return nil }
 func (c CmdResultsXunit) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "attach.xunit_results",
-		Params:       exportCmd(c),
+		CommandName: "attach.xunit_results",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -193,18 +193,24 @@ type CmdResultsGoTest struct {
 	LegacyFormat bool `json:"-"`
 }
 
-func (c CmdResultsGoTest) Validate() error { return nil }
+func (c CmdResultsGoTest) Validate() error {
+	if c.JSONFormat == c.LegacyFormat {
+		return errors.New("invalid format for gotest operation")
+	}
+
+	return nil
+}
 func (c CmdResultsGoTest) Resolve() *CommandDefinition {
 	if c.JSONFormat {
 		return &CommandDefinition{
-			FunctionName: "gotest.parse_json",
-			Params:       exportCmd(c),
+			CommandName: "gotest.parse_json",
+			Params:      exportCmd(c),
 		}
 	}
 
 	return &CommandDefinition{
-		FunctionName: "gotest.parse_files",
-		Params:       exportCmd(c),
+		CommandName: "gotest.parse_files",
+		Params:      exportCmd(c),
 	}
 }
 
@@ -260,8 +266,8 @@ type CmdArchiveCreate struct {
 func (c CmdArchiveCreate) Validate() error { return c.Format.Validate() }
 func (c CmdArchiveCreate) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: c.Format.createCmdName(),
-		Params:       exportCmd(c),
+		CommandName: c.Format.createCmdName(),
+		Params:      exportCmd(c),
 	}
 }
 
@@ -272,11 +278,19 @@ type CmdArchiveExtract struct {
 	Exclude []string      `json:"exclude_files"`
 }
 
-func (c CmdArchiveExtract) Validate() error { return nil }
+func (c CmdArchiveExtract) Validate() error {
+	err := c.Format.Validate()
+	if err != nil && c.Format != "auto" {
+		return err
+	}
+
+	return nil
+
+}
 func (c CmdArchiveExtract) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: c.Format.extractCmdName(),
-		Params:       exportCmd(c),
+		CommandName: c.Format.extractCmdName(),
+		Params:      exportCmd(c),
 	}
 }
 
@@ -288,7 +302,7 @@ type CmdAttachArtifacts struct {
 func (c CmdAttachArtifacts) Validate() error { return nil }
 func (c CmdAttachArtifacts) Resolve() *CommandDefinition {
 	return &CommandDefinition{
-		FunctionName: "attach.artifacts",
-		Params:       exportCmd(c),
+		CommandName: "attach.artifacts",
+		Params:      exportCmd(c),
 	}
 }
