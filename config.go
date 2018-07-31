@@ -22,13 +22,13 @@ import (
 // Configuration is the top-level representation of the components of
 // an evergreen project configuration.
 type Configuration struct {
-	Functions map[string]CommandSequence `json:"functions"`
-	Tasks     []*Task                    `json:"tasks"`
-	Groups    []*TaskGroup               `json:"groups"`
-	Variants  []*Variant                 `json:"variants"`
-	Pre       CommandSequence            `json:"pre"`
-	Post      CommandSequence            `json:"post"`
-	Timeout   CommandSequence            `json:"timeout"`
+	Functions map[string]*CommandSequence `json:"functions"`
+	Tasks     []*Task                     `json:"tasks"`
+	Groups    []*TaskGroup                `json:"groups"`
+	Variants  []*Variant                  `json:"variants"`
+	Pre       *CommandSequence            `json:"pre"`
+	Post      *CommandSequence            `json:"post"`
+	Timeout   *CommandSequence            `json:"timeout"`
 
 	// Top Level Options
 	ExecTimeoutSecs int      `json:"timeout,omitempty"`
@@ -51,7 +51,6 @@ func (c *Configuration) Task(name string) *Task {
 	t := new(Task)
 	t.Name = name
 	c.Tasks = append(c.Tasks, t)
-
 	return t
 }
 
@@ -73,16 +72,18 @@ func (c *Configuration) TaskGroup(name string) *TaskGroup {
 
 // Function creates a new function of the specific name and returns a
 // CommandSequence builder for use in adding commands to the function.
-func (c *Configuration) Function(name string) CommandSequence {
+func (c *Configuration) Function(name string) *CommandSequence {
 	if c.Functions == nil {
-		c.Functions = make(map[string]CommandSequence)
+		c.Functions = make(map[string]*CommandSequence)
 	}
 
 	seq, ok := c.Functions[name]
-	if !ok {
-		c.Functions[name] = seq
+	if ok {
+		return seq
 	}
 
+	seq = new(CommandSequence)
+	c.Functions[name] = seq
 	return seq
 }
 
