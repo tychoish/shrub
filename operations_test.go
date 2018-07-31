@@ -1,6 +1,7 @@
 package shrub
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -39,6 +40,16 @@ func TestWellformedOperations(t *testing.T) {
 	}
 }
 
+type unmarshableCmd struct {
+	name string
+}
+
+func (u unmarshableCmd) Validate() error             { return nil }
+func (u unmarshableCmd) Resolve() *CommandDefinition { panic("always") }
+func (u unmarshableCmd) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("always")
+}
+
 func TestPoorlyFormedOperations(t *testing.T) {
 	cases := map[string]Command{
 		"s3put.empty":         CmdS3Put{},
@@ -63,4 +74,11 @@ func TestPoorlyFormedOperations(t *testing.T) {
 			assert(t, rcmd == nil)
 		})
 	}
+
+	t.Run("AlwaysPanicsWhenCannotMarshal", func(t *testing.T) {
+		defer expect(t, "marshaling")
+
+		res := exportCmd(unmarshableCmd{name: "sad"})
+		assert(t, res == nil)
+	})
 }

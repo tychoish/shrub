@@ -107,6 +107,8 @@ func (c *Configuration) Variant(id string) *Variant {
 //
 // Highlevel project-wide configuration settings.
 
+// ExectTimeout allows you to set the exec timeout for all commands to
+// a specified value. This value has second-level granularity.
 func (c *Configuration) ExecTimeout(dur time.Duration) *Configuration {
 	c.ExecTimeoutSecs = int(dur.Seconds())
 	return c

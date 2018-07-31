@@ -6,10 +6,8 @@ import (
 	"time"
 )
 
-type testCase func(*testing.T, *Configuration)
-
 func TestConfigTopLevelModifiers(t *testing.T) {
-	cases := map[string]testCase{
+	cases := map[string]func(*testing.T, *Configuration){
 		"AddMultipleTasks": func(t *testing.T, conf *Configuration) {
 			assert(t, len(conf.Tasks) == 0, "is empty")
 			t1 := conf.Task("one")
@@ -187,7 +185,7 @@ func TestConfigTopLevelModifiers(t *testing.T) {
 }
 
 func TestHighLevelProjectSettings(t *testing.T) {
-	cases := map[string]testCase{
+	cases := map[string]func(*testing.T, *Configuration){
 		"SetExecTimeOut": func(t *testing.T, conf *Configuration) {
 			assert(t, conf.ExecTimeoutSecs == 0, "has default zero value")
 

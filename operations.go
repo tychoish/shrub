@@ -17,16 +17,14 @@ func exportCmd(cmd Command) map[string]interface{} {
 	}
 
 	jsonStruct, err := json.Marshal(cmd)
-	if err != nil {
-		panic(err)
+	if err == nil {
+		out := map[string]interface{}{}
+		if err = json.Unmarshal(jsonStruct, &out); err == nil {
+			return out
+		}
 	}
 
-	out := map[string]interface{}{}
-	if err := json.Unmarshal(jsonStruct, &out); err != nil {
-		panic(err)
-	}
-
-	return out
+	panic(err)
 }
 
 type CmdExec struct {
